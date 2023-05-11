@@ -19,6 +19,7 @@ type RewardMeta struct {
 	ValidatorIndex  string
 	ValidatorPubKey string
 	Reward          *big.Int
+	Balance         *big.Int
 }
 
 func QueryEth2Rewards(recipientAddr string, eth2Rpc string) ([]RewardMeta, error) {
@@ -26,6 +27,7 @@ func QueryEth2Rewards(recipientAddr string, eth2Rpc string) ([]RewardMeta, error
 
 	rewards := make([]RewardMeta, 0)
 	pubkeyCache := make(map[string]string)
+	balanceCache := make(map[string]*big.Int)
 	for {
 		response, err := http.Get(fmt.Sprintf(scanUrl, recipientAddr, page))
 		if err != nil {
@@ -74,6 +76,11 @@ func QueryEth2Rewards(recipientAddr string, eth2Rpc string) ([]RewardMeta, error
 						fmt.Println("GetValidatorInfoOfIndex fail, err: ", err.Error())
 					}
 					pubkeyCache[validatorIndex] = v.Data.Validator.Pubkey
+					balance, isOk := big.NewInt(0).SetString(v.Data.Balance, 10)
+					if !isOk {
+						panic(isOk)
+					}
+					balanceCache[validatorIndex] = balance
 				}
 
 				rewards = append(rewards, RewardMeta{
@@ -82,6 +89,7 @@ func QueryEth2Rewards(recipientAddr string, eth2Rpc string) ([]RewardMeta, error
 					ValidatorIndex:  validatorIndex,
 					ValidatorPubKey: pubkeyCache[validatorIndex],
 					Reward:          bigIntReward,
+					Balance:         balanceCache[validatorIndex],
 				})
 			}
 		}
